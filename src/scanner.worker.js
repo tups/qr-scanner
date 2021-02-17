@@ -1,5 +1,19 @@
-import jsQR from '../node_modules/jsqr-es6/dist/jsQR.js';
-import Quagga from 'quagga';
+import jsQR from 'jsqr-es6/dist/jsQR.js';
+import {
+    CreateTable,
+    CreateScanTable,
+    Scale,
+    Rotate,
+    ScanImage,
+    Image,
+    FormatPriority,
+    Multiple,
+    availableFormats,
+    Locations,
+    Main
+} from "./Decoder1D";
+
+
 /* eslint-disable no-restricted-globals */
 //import {BrowserMultiFormatReader} from "@zxing/library/es2015/index.js";
 
@@ -40,31 +54,95 @@ function decode(data) {
     const height = data['height'];
     const worker = self;
 
-    Quagga.decodeSingle({
-        decoder: {
-            readers: ["ean_reader"] // List of active readers
-        },
-        locate: true, // try to locate the barcode in the image
-        src: 'data:image/jpg;base64,' + rgbaData // or 'data:image/jpg;base64,' + data
-    }, function(result){
-        if(result.codeResult) {
-            worker.postMessage({
-                type: 'qrResult',
-                data: result.codeResult.code ? result.codeResult.code : null,
-            });
-        } else {
-            const resultTemp = jsQR(rgbaData, width, height, {
-                inversionAttempts: inversionAttempts,
-                greyScaleWeights: grayscaleWeights,
-            });
-
-            worker.postMessage({
-                type: 'qrResult',
-                data: resultTemp ? resultTemp : null,
-            });
-
-        }
+    const resultTemp = jsQR(rgbaData, width, height, {
+        inversionAttempts: inversionAttempts,
+        greyScaleWeights: grayscaleWeights,
     });
+
+    if (resultTemp) {
+        worker.postMessage({
+            type: 'qrResult',
+            data: resultTemp ? resultTemp : null,
+        });
+    } else {
+        let width;
+        let decodeFormats;
+
+        ScanImage = {
+            data: new Uint8ClampedArray(data.scan),
+            width: data.scanWidth,
+            height: data.scanHeight
+        };
+        switch (data.rotation) {
+            case 8:
+                ScanImage.data = Rotate(ScanImage.data, ScanImage.width, ScanImage.height, -90);
+                width = data.scanWidth;
+                ScanImage.width = ScanImage.height;
+                ScanImage.height = width;
+                break;
+            case 6:
+                ScanImage.data = Rotate(ScanImage.data, ScanImage.width, ScanImage.height, 90);
+                width = data.scanWidth;
+                ScanImage.width = ScanImage.height;
+                ScanImage.height = width;
+                break;
+            case 3:
+                ScanImage.data = Rotate(ScanImage.data, ScanImage.width, ScanImage.height, 180);
+        }
+        Image = {
+            data: Scale(ScanImage.data, ScanImage.width, ScanImage.height),
+            width: ScanImage.width / 2,
+            height: ScanImage.height / 2
+        };
+        if (data.postOrientation) {
+            postMessage({
+                result: Image,
+                success: 'orientationData'
+            });
+        }
+
+        FormatPriority = [];
+        Multiple = true;
+
+        if (typeof data.multiple !== 'undefined') {
+            Multiple = data.multiple;
+        }
+
+        if (typeof data.decodeFormats !== 'undefined') {
+            decodeFormats = data.decodeFormats;
+        } else {
+            decodeFormats = availableFormats;
+        }
+
+        for (let i = 0; i < decodeFormats.length; i++) {
+            FormatPriority.push(decodeFormats[i]);
+        }
+
+        Locations = [];
+
+        Promise.all([CreateTable(), CreateScanTable()]).then(() => {
+
+            let FinalResult = Main();
+
+            if (FinalResult.length > 0) {
+                postMessage({
+                    id: data.id,
+                    result: FinalResult,
+                    success: true,
+                    type: 'qrResult',
+                    data: FinalResult,
+                });
+            } else {
+                postMessage({
+                    id: data.id,
+                    result: FinalResult,
+                    success: false,
+                    type: 'qrResult',
+                    data: null,
+                });
+            }
+        });
+    }
 
 }
 

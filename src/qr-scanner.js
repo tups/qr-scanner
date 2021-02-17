@@ -1,4 +1,18 @@
+
 export default class QrScanner {
+
+    static DECODE_FORMATS = [
+        'code_128',
+        'code_93',
+        'code_39',
+        'ean_13',
+        '2Of5',
+        'Inter2Of5',
+        'codabar',
+        'qr_code'
+    ];
+
+
     /* async */
     static hasCamera() {
         if (!navigator.mediaDevices) return Promise.resolve(false);
@@ -12,11 +26,17 @@ export default class QrScanner {
 
     constructor(
         video,
+        options,
         onDecode,
         canvasSizeOrOnDecodeError = this._onDecodeError,
         canvasSizeOrCalculateScanRegion = this._calculateScanRegion,
         preferredFacingMode = 'environment'
     ) {
+
+        this._options = Object.assign({
+            'formats': ['qr_code', 'ean_13', 'code_39']
+        }, options);
+
         this.$video = video;
         this.$canvas = document.createElement('canvas');
         this._onDecode = onDecode;
@@ -61,7 +81,7 @@ export default class QrScanner {
         this.$video.addEventListener('loadedmetadata', this._onLoadedMetaData);
         document.addEventListener('visibilitychange', this._onVisibilityChange);
 
-        this._qrEnginePromise = QrScanner.createQrEngine();
+        this._qrEnginePromise = QrScanner.createQrEngine(QrScanner.WORKER_PATH, this._options.formats);
     }
 
     /* async */
@@ -184,7 +204,7 @@ export default class QrScanner {
 
     /* async */
     static scanImage(imageOrFileOrUrl, scanRegion=null, qrEngine=null, canvas=null, fixedCanvasSize=false,
-                     alsoTryWithoutScanRegion=false) {
+                     alsoTryWithoutScanRegion=false, options={}) {
         const gotExternalWorker = qrEngine instanceof Worker;
 
         let promise = Promise.all([
@@ -228,7 +248,15 @@ export default class QrScanner {
                     const imageData = canvasContext.getImageData(0, 0, canvas.width, canvas.height);
                     qrEngine.postMessage({
                         type: 'decode',
-                        data: imageData
+                        data: imageData,
+                        scan: imageData.getImageData(0, 0, canvas.width, canvas.height).data,
+                        scanWidth: canvas.width,
+                        scanHeight: canvas.height,
+                        multiple: true,
+                        decodeFormats: options.hasOwnProperty('formats') ? options.formats : ['qr_code'],
+                        cmd: 'normal',
+                        rotation: 1,
+                        postOrientation: false,
                     }, [imageData.data.buffer]);
                 });
             } else {
@@ -274,11 +302,20 @@ export default class QrScanner {
     }
 
     /* async */
-    static createQrEngine(workerPath = QrScanner.WORKER_PATH) {
+    static createQrEngine(workerPath = QrScanner.WORKER_PATH, formats = ['qr_code']) {
         return ('BarcodeDetector' in window ? BarcodeDetector.getSupportedFormats() : Promise.resolve([]))
-            .then((supportedFormats) => supportedFormats.indexOf('qr_code') !== -1
-                ? new BarcodeDetector({ formats: ['qr_code'] })
-                : new Worker(workerPath)
+            .then((supportedFormats) => {
+                let formatNotSupport = [];
+                formats.forEach(function (format) {
+                    if(supportedFormats.indexOf('qr_code') === -1) {
+                        formatNotSupport.push(format);
+                    }
+                });
+
+                    return formatNotSupport.length
+                    ? new BarcodeDetector({ formats: formats})
+                    : new Worker(workerPath)
+            }
             );
     }
 
@@ -326,7 +363,7 @@ export default class QrScanner {
                 return;
             }
             this._qrEnginePromise
-                .then((qrEngine) => QrScanner.scanImage(this.$video, this._scanRegion, qrEngine, this.$canvas))
+                .then((qrEngine) => QrScanner.scanImage(this.$video, this._scanRegion, qrEngine, this.$canvas, this._options))
                 .then(this._onDecode, (error) => {
                     if (!this._active) return;
                     const errorMessage = error.message || error;
