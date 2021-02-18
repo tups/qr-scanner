@@ -312,7 +312,7 @@ export default class QrScanner {
                 }
             });
 
-            return formatNotSupport.length
+            return !formatNotSupport.length
                 ? new BarcodeDetector({formats: formats})
                 : new Worker(workerPath)
         });
