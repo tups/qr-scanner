@@ -1,4 +1,3 @@
-
 export default class QrScanner {
 
     static DECODE_FORMATS = [
@@ -107,22 +106,22 @@ export default class QrScanner {
     }
 
     isFlashOn() {
-      return this._flashOn;
+        return this._flashOn;
     }
 
     /* async */
     toggleFlash() {
-      return this._setFlash(!this._flashOn);
+        return this._setFlash(!this._flashOn);
     }
 
     /* async */
     turnFlashOff() {
-      return this._setFlash(false);
+        return this._setFlash(false);
     }
 
     /* async */
     turnFlashOn() {
-      return this._setFlash(true);
+        return this._setFlash(true);
     }
 
     destroy() {
@@ -203,8 +202,8 @@ export default class QrScanner {
     }
 
     /* async */
-    static scanImage(imageOrFileOrUrl, scanRegion=null, qrEngine=null, canvas=null, fixedCanvasSize=false,
-                     alsoTryWithoutScanRegion=false, options={}) {
+    static scanImage(imageOrFileOrUrl, scanRegion = null, qrEngine = null, canvas = null, fixedCanvasSize = false,
+                     alsoTryWithoutScanRegion = false, options = {}) {
         const gotExternalWorker = qrEngine instanceof Worker;
 
         let promise = Promise.all([
@@ -218,7 +217,7 @@ export default class QrScanner {
             if (qrEngine instanceof Worker) {
                 if (!gotExternalWorker) {
                     // Enable scanning of inverted color qr codes. Not using _postWorkerMessage as it's async
-                    qrEngine.postMessage({ type: 'inversionMode', data: 'both' });
+                    qrEngine.postMessage({type: 'inversionMode', data: 'both'});
                 }
                 return new Promise((resolve, reject) => {
                     let timeout, onMessage, onError;
@@ -291,7 +290,7 @@ export default class QrScanner {
         QrScanner._postWorkerMessage(
             this._qrEnginePromise,
             'grayscaleWeights',
-            { red, green, blue, useIntegerApproximation }
+            {red, green, blue, useIntegerApproximation}
         );
     }
 
@@ -303,20 +302,22 @@ export default class QrScanner {
 
     /* async */
     static createQrEngine(workerPath = QrScanner.WORKER_PATH, formats = ['qr_code']) {
-        return ('BarcodeDetector' in window ? BarcodeDetector.getSupportedFormats() : Promise.resolve([]))
-            .then((supportedFormats) => {
-                let formatNotSupport = [];
-                formats.forEach(function (format) {
-                    if(supportedFormats.indexOf('qr_code') === -1) {
-                        formatNotSupport.push(format);
-                    }
-                });
+        let promiseSupport = 'BarcodeDetector' in window ? BarcodeDetector.getSupportedFormats() : Promise.resolve([]);
 
-                    return formatNotSupport.length
-                    ? new BarcodeDetector({ formats: formats})
-                    : new Worker(workerPath)
-            }
-            );
+        promiseSupport.then((supportedFormats) => {
+            let formatNotSupport = [];
+            formats.forEach(function (format) {
+                if (supportedFormats.indexOf(format) === -1) {
+                    formatNotSupport.push(format);
+                }
+            });
+
+            return formatNotSupport.length
+                ? new BarcodeDetector({formats: formats})
+                : new Worker(workerPath)
+        });
+
+
     }
 
     _onPlay() {
@@ -385,14 +386,14 @@ export default class QrScanner {
 
     _getCameraStream(facingMode, exact = false) {
         const constraintsToTry = [{
-            width: { min: 1024 }
+            width: {min: 1024}
         }, {
-            width: { min: 768 }
+            width: {min: 768}
         }, {}];
 
         if (facingMode) {
             if (exact) {
-                facingMode = { exact: facingMode };
+                facingMode = {exact: facingMode};
             }
             constraintsToTry.forEach(constraint => constraint.facingMode = facingMode);
         }
@@ -414,14 +415,14 @@ export default class QrScanner {
             if (!hasFlash) return Promise.reject('No flash available');
             // Note that the video track is guaranteed to exist at this point
             return this.$video.srcObject.getVideoTracks()[0].applyConstraints({
-                advanced: [{ torch: on }],
+                advanced: [{torch: on}],
             });
         }).then(() => this._flashOn = on);
     }
 
     _setVideoMirror(facingMode) {
         // in user facing mode mirror the video to make it easier for the user to position the QR code
-        const scaleFactor = facingMode==='user'? -1 : 1;
+        const scaleFactor = facingMode === 'user' ? -1 : 1;
         this.$video.style.transform = 'scaleX(' + scaleFactor + ')';
     }
 
@@ -436,17 +437,17 @@ export default class QrScanner {
                 : null; // unknown
     }
 
-    static _drawToCanvas(image, scanRegion=null, canvas=null, fixedCanvasSize=false) {
+    static _drawToCanvas(image, scanRegion = null, canvas = null, fixedCanvasSize = false) {
         canvas = canvas || document.createElement('canvas');
-        const scanRegionX = scanRegion && scanRegion.x? scanRegion.x : 0;
-        const scanRegionY = scanRegion && scanRegion.y? scanRegion.y : 0;
-        const scanRegionWidth = scanRegion && scanRegion.width? scanRegion.width : image.width || image.videoWidth;
-        const scanRegionHeight = scanRegion && scanRegion.height? scanRegion.height : image.height || image.videoHeight;
+        const scanRegionX = scanRegion && scanRegion.x ? scanRegion.x : 0;
+        const scanRegionY = scanRegion && scanRegion.y ? scanRegion.y : 0;
+        const scanRegionWidth = scanRegion && scanRegion.width ? scanRegion.width : image.width || image.videoWidth;
+        const scanRegionHeight = scanRegion && scanRegion.height ? scanRegion.height : image.height || image.videoHeight;
         if (!fixedCanvasSize) {
-            canvas.width = scanRegion && scanRegion.downScaledWidth? scanRegion.downScaledWidth : scanRegionWidth;
-            canvas.height = scanRegion && scanRegion.downScaledHeight? scanRegion.downScaledHeight : scanRegionHeight;
+            canvas.width = scanRegion && scanRegion.downScaledWidth ? scanRegion.downScaledWidth : scanRegionWidth;
+            canvas.height = scanRegion && scanRegion.downScaledHeight ? scanRegion.downScaledHeight : scanRegionHeight;
         }
-        const context = canvas.getContext('2d', { alpha: false });
+        const context = canvas.getContext('2d', {alpha: false});
         context.imageSmoothingEnabled = false; // gives less blurry images
         context.drawImage(
             image,
@@ -465,7 +466,7 @@ export default class QrScanner {
         } else if (imageOrFileOrBlobOrUrl instanceof Image) {
             return QrScanner._awaitImageLoad(imageOrFileOrBlobOrUrl).then(() => imageOrFileOrBlobOrUrl);
         } else if (imageOrFileOrBlobOrUrl instanceof File || imageOrFileOrBlobOrUrl instanceof Blob
-            || imageOrFileOrBlobOrUrl instanceof URL || typeof(imageOrFileOrBlobOrUrl)==='string') {
+            || imageOrFileOrBlobOrUrl instanceof URL || typeof (imageOrFileOrBlobOrUrl) === 'string') {
             const image = new Image();
             if (imageOrFileOrBlobOrUrl instanceof File || imageOrFileOrBlobOrUrl instanceof Blob) {
                 image.src = URL.createObjectURL(imageOrFileOrBlobOrUrl);
@@ -486,7 +487,7 @@ export default class QrScanner {
     /* async */
     static _awaitImageLoad(image) {
         return new Promise((resolve, reject) => {
-            if (image.complete && image.naturalWidth!==0) {
+            if (image.complete && image.naturalWidth !== 0) {
                 // already loaded
                 resolve();
             } else {
@@ -511,7 +512,7 @@ export default class QrScanner {
     static _postWorkerMessage(qrEngineOrQrEnginePromise, type, data) {
         return Promise.resolve(qrEngineOrQrEnginePromise).then((qrEngine) => {
             if (!(qrEngine instanceof Worker)) return;
-            qrEngine.postMessage({ type, data });
+            qrEngine.postMessage({type, data});
         });
     }
 }

@@ -845,10 +845,11 @@ var QrScanner = /*#__PURE__*/function () {
     value: function createQrEngine() {
       var workerPath = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : QrScanner.WORKER_PATH;
       var formats = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : ['qr_code'];
-      return ('BarcodeDetector' in window ? BarcodeDetector.getSupportedFormats() : Promise.resolve([])).then(function (supportedFormats) {
+      var promiseSupport = 'BarcodeDetector' in window ? BarcodeDetector.getSupportedFormats() : Promise.resolve([]);
+      promiseSupport.then(function (supportedFormats) {
         var formatNotSupport = [];
         formats.forEach(function (format) {
-          if (supportedFormats.indexOf('qr_code') === -1) {
+          if (supportedFormats.indexOf(format) === -1) {
             formatNotSupport.push(format);
           }
         });
