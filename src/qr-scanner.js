@@ -317,7 +317,6 @@ export default class QrScanner {
                 : new Worker(workerPath)
         });
 
-
     }
 
     _onPlay() {

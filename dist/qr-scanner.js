@@ -853,7 +853,7 @@ var QrScanner = /*#__PURE__*/function () {
             formatNotSupport.push(format);
           }
         });
-        return formatNotSupport.length ? new BarcodeDetector({
+        return !formatNotSupport.length ? new BarcodeDetector({
           formats: formats
         }) : new Worker(workerPath);
       });
