@@ -302,7 +302,8 @@ export default class QrScanner {
 
     /* async */
     static createQrEngine(workerPath = QrScanner.WORKER_PATH, formats = ['qr_code']) {
-        let promiseSupport = 'BarcodeDetector' in window ? BarcodeDetector.getSupportedFormats() : Promise.resolve(QrScanner.DECODE_FORMATS);
+        let isBrowserBarcodeDetector = 'BarcodeDetector' in window;
+        let promiseSupport = isBrowserBarcodeDetector ? BarcodeDetector.getSupportedFormats() : Promise.resolve(QrScanner.DECODE_FORMATS);
 
         promiseSupport.then((supportedFormats) => {
             let formatNotSupport = [];
@@ -312,7 +313,7 @@ export default class QrScanner {
                 }
             });
 
-            return !formatNotSupport.length
+            return !formatNotSupport.length && isBrowserBarcodeDetector
                 ? new BarcodeDetector({formats: formats})
                 : new Worker(workerPath)
         });
