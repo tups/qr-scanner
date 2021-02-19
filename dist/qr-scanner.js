@@ -845,7 +845,7 @@ var QrScanner = /*#__PURE__*/function () {
     value: function createQrEngine() {
       var workerPath = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : QrScanner.WORKER_PATH;
       var formats = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : ['qr_code'];
-      var promiseSupport = 'BarcodeDetector' in window ? BarcodeDetector.getSupportedFormats() : Promise.resolve([]);
+      var promiseSupport = 'BarcodeDetector' in window ? BarcodeDetector.getSupportedFormats() : Promise.resolve(QrScanner.DECODE_FORMATS);
       promiseSupport.then(function (supportedFormats) {
         var formatNotSupport = [];
         formats.forEach(function (format) {
